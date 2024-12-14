@@ -236,7 +236,31 @@ public:
     update_counter_ = 0;
   }
 
-  void set_name(const char* value) {name = value;}
+  void configure_fan_levels(
+      uint8_t exhaust_level_absent,
+      uint8_t exhaust_level_low,
+      uint8_t exhaust_level_mid,
+      uint8_t exhaust_level_high,
+      uint8_t supply_level_absent,
+      uint8_t supply_level_low,
+      uint8_t supply_level_mid,
+      uint8_t supply_level_high
+  ) {
+    uint8_t command[9] = {
+      exhaust_level_absent, 
+      exhaust_level_low, 
+      exhaust_level_mid, 
+      supply_level_absent,
+      supply_level_low,
+      supply_level_mid,
+      exhaust_level_high,
+      supply_level_high,
+      0
+    };
+    ESP_LOGW(TAG, "setting ventilation level: %i %i %i %i %i %i %i %i %i", command[0], command[1], command[2], command[3], command[4], command[5], command[6], command[7], command[8]);
+    write_command_(CMD_SET_VENTILATION_LEVEL, command, sizeof(command));
+  }
+
   void set_uart_component(uart::UARTComponent *parent) {set_uart_parent(parent);}
 
 protected:
@@ -898,7 +922,6 @@ protected:
   uint8_t bootloader_version_[13]{0};
   uint8_t firmware_version_[13]{0};
   uint8_t connector_board_version_[14]{0};
-  const char* name{0};
 
 public:
   text_sensor::TextSensor *type{nullptr};
