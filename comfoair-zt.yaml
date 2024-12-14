@@ -17,8 +17,11 @@ ota:
     password: ""
 
 wifi:
-  ssid: !secret wifi_ssid
-  password: !secret wifi_password
+  networks:
+  - ssid: !secret wifi_ssid_zt
+    password: !secret wifi_password_zt
+  - ssid: !secret wifi_ssid
+    password: !secret wifi_password
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
 
@@ -33,11 +36,6 @@ uart:
   baud_rate: 9600
   tx_pin: 18
   rx_pin: 19
-
-switch:
-  - platform: gpio
-    name: "Test"
-    pin: GPIO17
 
 button:
   - platform: template
