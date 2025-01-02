@@ -38,10 +38,14 @@ external_components:
   - source: components
 
 uart:
-  id: uart_bus
-  baud_rate: 9600
-  tx_pin: 17
-  rx_pin: 16
+  - id: uart_bus
+    baud_rate: 9600
+    tx_pin: 17
+    rx_pin: 16
+  - id: uart_proxy
+    baud_rate: 9600
+    tx_pin: 19
+    rx_pin: 18
 
 button:
   - platform: template
@@ -80,6 +84,7 @@ comfoair:
   climate_entity_id: comfoair_180
   name: "ComfoAir 180"
   uart_id: uart_bus
+  proxy_uart: uart_proxy
   # === Fan status ===
   intake_fan_speed:
     name: "Supply air level"

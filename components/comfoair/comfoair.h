@@ -14,6 +14,10 @@ namespace comfoair {
 
 static const char *TAG = "comfoair";
 
+static const uint8_t COMFOAIR_MIN_SUPPORTED_TEMP = 12;
+static const uint8_t COMFOAIR_MAX_SUPPORTED_TEMP = 29;
+static const float COMFOAIR_SUPPORTED_TEMP_STEP = 0.5f;
+
 class ComfoAirComponent : public climate::Climate, public PollingComponent, public uart::UARTDevice {
 public:
 
@@ -35,9 +39,9 @@ public:
       climate::CLIMATE_PRESET_HOME,
     });
     traits.set_supports_action(false);
-    traits.set_visual_min_temperature(12);
-    traits.set_visual_max_temperature(29);
-    traits.set_visual_temperature_step(1);
+    traits.set_visual_min_temperature(COMFOAIR_MIN_SUPPORTED_TEMP);
+    traits.set_visual_max_temperature(COMFOAIR_MAX_SUPPORTED_TEMP);
+    traits.set_visual_temperature_step(COMFOAIR_SUPPORTED_TEMP_STEP);
     traits.set_supported_fan_modes({
       // climate::CLIMATE_FAN_AUTO,
       climate::CLIMATE_FAN_LOW,
@@ -199,6 +203,29 @@ public:
   }
 
   void loop() override {
+    // Proxy commands from the display.
+    while(uart_proxy_ != nullptr && uart_proxy_->available() != 0) {
+      uart_proxy_->read_byte(&proxy_data_[proxy_data_index_]);
+      auto check = check_byte_(proxy_data_, proxy_data_index_);
+      if (!check.has_value()) {
+        if (proxy_data_[COMMAND_ID_ACK] == COMMAND_ACK) {
+          ESP_LOGV(TAG, "Proxying ACK from confosense.");
+        } else {
+          ESP_LOGD(TAG, "Proxying command 0x%02X from confosense with %i bytes.", proxy_data_[COMMAND_IDX_MSG_ID], proxy_data_index_+1);
+        }
+        write_array(proxy_data_, proxy_data_index_+1);
+        flush();
+        proxy_data_index_ = 0;
+        break;
+      } else if (!*check) {
+        // wrong data
+        ESP_LOGD(TAG, "Byte %i of received data from confosense is invalid.", proxy_data_index_);
+        proxy_data_index_ = 0;
+      } else {
+        proxy_data_index_++;
+      }
+    }
+
     while (available() != 0) {
       read_byte(&data_[data_index_]);
       auto check = check_byte_(data_, data_index_);
@@ -208,10 +235,22 @@ public:
         if (data_[COMMAND_ID_ACK] != COMMAND_ACK) {
           parse_data_();
         }
+
+        // Proxy result to the display.
+        if (uart_proxy_ != nullptr) {
+          if (data_[COMMAND_ID_ACK] == COMMAND_ACK) {
+            ESP_LOGV(TAG, "Proxying ACK from comfoair.");
+          } else {
+            ESP_LOGD(TAG, "Proxying command 0x%02X from comfoair with %i bytes.", data_[COMMAND_IDX_MSG_ID], data_index_+1);
+          }
+          uart_proxy_->write_array(data_, data_index_+1);
+          uart_proxy_->flush();
+        }
+
         data_index_ = 0;
       } else if (!*check) {
         // wrong data
-        ESP_LOGV(TAG, "Byte %i of received data frame is invalid.", data_index_);
+        ESP_LOGD(TAG, "Byte %i of received data from comfoair is invalid.", data_index_);
         data_index_ = 0;
       } else {
         // next byte
@@ -263,10 +302,17 @@ public:
 
   void set_uart_component(uart::UARTComponent *parent) {set_uart_parent(parent);}
 
+  void set_proxy_uart_component(uart::UARTComponent* proxy) {
+    if (uart_proxy_ != nullptr) {
+      delete uart_proxy_;
+    }
+    uart_proxy_ = new uart::UARTDevice(proxy);
+  }
+
 protected:
 
   void set_level_(int level) {
-    if (level < 0 || level > 5) {
+    if (level < 0 || level > 4) {
       ESP_LOGI(TAG, "Ignoring invalid level request: %i", level);
       return;
     }
@@ -279,7 +325,8 @@ protected:
   }
 
   void set_comfort_temperature_(float temperature) {
-    if (temperature < 12.0f || temperature > 29.0f) {
+    if (temperature < COMFOAIR_MIN_SUPPORTED_TEMP || 
+        temperature > COMFOAIR_MAX_SUPPORTED_TEMP) {
       ESP_LOGI(TAG, "Ignoring invalid temperature request: %f", temperature);
       return;
     }
@@ -363,6 +410,7 @@ protected:
       if (byte == 0x07) {
         if (encountered_seven_) {
           encountered_seven_ = false;
+          ESP_LOGI(TAG, "Encountered 7 at index %i", index);
           index--;
           return true;
         }
@@ -378,7 +426,11 @@ protected:
       uint8_t checksum = comfoair_checksum_(data + 2, COMMAND_LEN_HEAD + data_length - 2);
       if (checksum != byte) {
         ESP_LOGW(TAG, "ComfoAir Checksum doesn't match: 0x%02X!=0x%02X", byte, checksum);
-        ESP_LOGW(TAG, "%02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X", data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8], data[9], data[10]);
+        ESP_LOGW(
+            TAG,
+            "%02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X",
+            data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8], data[9],
+            data[10], data[11], data[12], data[13], data[14], data[15], data[16], data[17], data[18], data[19]);
         return false;
       }
       return true;
@@ -840,8 +892,8 @@ protected:
 
   void get_valve_status_() {
     if (bypass_valve != nullptr ||
-      bypass_valve_open != nullptr ||
-      preheating_state != nullptr) {
+        bypass_valve_open != nullptr ||
+        preheating_state != nullptr) {
       ESP_LOGD(TAG, "getting valve status");
       write_command_(CMD_GET_VALVE_STATUS, nullptr, 0);
     }
@@ -856,9 +908,9 @@ protected:
 
   void get_bypass_control_status_() {
     if (bypass_factor != nullptr ||
-      bypass_step != nullptr ||
-      bypass_correction != nullptr ||
-      summer_mode != nullptr) {
+        bypass_step != nullptr ||
+        bypass_correction != nullptr ||
+        summer_mode != nullptr) {
       ESP_LOGD(TAG, "getting bypass control");
       write_command_(CMD_GET_BYPASS_CONTROL_STATUS, nullptr, 0);
     }
@@ -866,9 +918,9 @@ protected:
 
   void get_temperature_() {
     if (outside_air_temperature != nullptr ||
-      supply_air_temperature != nullptr ||
-      return_air_temperature != nullptr ||
-      outside_air_temperature != nullptr) {
+        supply_air_temperature != nullptr ||
+        return_air_temperature != nullptr ||
+        outside_air_temperature != nullptr) {
       ESP_LOGD(TAG, "getting temperature");
       write_command_(CMD_GET_TEMPERATURE_STATUS, nullptr, 0);
     }
@@ -916,12 +968,16 @@ protected:
 
   uint8_t data_[30];
   uint8_t data_index_{0};
+  uint8_t proxy_data_[30];
+  uint8_t proxy_data_index_{0};
   bool encountered_seven_{false};
   int16_t update_counter_{-4};
 
   uint8_t bootloader_version_[13]{0};
   uint8_t firmware_version_[13]{0};
   uint8_t connector_board_version_[14]{0};
+
+  uart::UARTDevice *uart_proxy_{nullptr};
 
 public:
   text_sensor::TextSensor *type{nullptr};
