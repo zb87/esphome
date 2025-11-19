@@ -10,6 +10,12 @@ See https://esphome.io/guides/installing_esphome
 esphome run <yaml file>
 ```
 
+## Compile and install on a specific device
+
+```
+esphome run <yaml file> --device <ip address>
+```
+
 ## Monitor the logs
 
 ```

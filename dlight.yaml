@@ -1,0 +1,221 @@
+substitutions:
+  devicename: "zb-dlight"
+
+esphome:
+  name: ${devicename}
+  friendly_name: ${devicename}
+
+esp32:
+  board: esp-wrover-kit
+  framework:
+    type: esp-idf
+    version: recommended
+
+# Enable logging
+logger:
+  level: WARN
+
+# Enable Home Assistant API
+api:
+
+ota:
+  - platform: esphome
+    password: !secret wifi_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+
+captive_portal:
+    
+web_server:
+  port: 80
+
+time:
+  - platform: sntp
+    id: my_time
+    timezone: Europe/Zurich
+
+sensor:
+  - platform: uptime
+    type: timestamp
+    name: "Last Boot Time"
+
+#esp32_ble_tracker:
+#  scan_parameters:
+#    active: true
+
+#bluetooth_proxy:
+#  active: true
+
+spi:
+  - clk_pin: GPIO12
+    mosi_pin: GPIO27
+    miso_pin: GPIO14
+    interface: hardware
+
+spi_device:
+  - id: u3_spi
+    cs_pin: GPIO26
+  - id: u4_spi
+    cs_pin: GPIO25
+
+light:
+  - platform: status_led
+    pin: 
+      number: GPIO23
+      inverted: true
+    name: "Status Light"
+    icon: mdi:alarm-light
+    restore_mode: ALWAYS_ON
+
+  - platform: cwww
+    name: "Light"
+    id: main_light
+    icon: mdi:desk-lamp
+    cold_white: out_cw
+    warm_white: out_ww
+    cold_white_color_temperature: 6536 K
+    warm_white_color_temperature: 2000 K
+    constant_brightness: true
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO13
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    name: "Reset Button"
+  - platform: gpio
+    pin:
+      number: GPIO34
+      mode:
+        input: true
+      inverted: true
+    name: "U3 Finger Down"
+    filters:
+      - delayed_on: 100ms
+    on_press:
+      then:
+        - lambda: !lambda |-
+            id(u3_spi).enable();
+            uint8_t data = id(u3_spi).transfer_byte(0xFF);
+            id(u3_spi).disable();
+            if (data == 131) {
+              id(power_button).turn_on();
+            } else {
+              auto call = id(last_colour_temp).make_call();
+              if (data > 55) {
+                call.set_value(0);
+              } else {
+                if (data < 2) {
+                  call.set_value(255);
+                } else {
+                  uint8_t ndata = (55 - data); 
+                  call.set_value((ndata * 255) / 53);
+                }
+              }
+              call.perform();
+            }
+    on_release:
+      then:
+        - lambda: !lambda |-
+            id(power_button).turn_off();
+  - platform: gpio
+    pin:
+      number: GPIO35
+      mode:
+        input: true
+      inverted: true
+    name: "U4 Finger Down"
+    filters:
+      - delayed_on: 100ms
+    on_press:
+      then:
+        - lambda: !lambda |-
+            id(u4_spi).enable();
+            uint8_t data = id(u4_spi).transfer_byte(0xFF);
+            id(u4_spi).disable();
+            if (data == 131) {
+              id(power_button).turn_on();
+            } else {
+              auto call = id(last_brightness).make_call();
+              if (data > 55) {
+                call.set_value(0);
+              } else {
+                if (data < 2) {
+                  call.set_value(255);
+                } else {
+                  uint8_t ndata = (55 - data); 
+                  call.set_value((ndata * 255) / 53);
+                }
+              }
+              call.perform();
+            }
+    on_release:
+      then:
+        - lambda: !lambda |-
+            id(power_button).turn_off();
+
+number:
+  - platform: template
+    id: last_brightness
+    name: "Last Brightness Touch Input"
+    min_value: 0
+    max_value: 255
+    step: 1
+    optimistic: true
+    on_value:
+      then:
+        - lambda: !lambda |-
+            auto call = id(main_light).make_call();
+            call.set_brightness(x / 255);
+            call.perform();
+
+  - platform: template
+    id: last_colour_temp
+    name: "Last Colour Temp Touch Input"
+    min_value: 0
+    max_value: 255
+    step: 1
+    optimistic: true
+    on_value:
+      then:
+        - lambda: !lambda |-
+            auto call = id(main_light).make_call();
+            call.set_color_temperature(((x / 255) * 347)+153.0);
+            call.perform();
+
+switch:
+  - platform: gpio
+    pin: GPIO15
+    name: "Light Enabled"
+    inverted: true
+    restore_mode: ALWAYS_ON
+  - platform: template
+    name: "Power Button"
+    id: power_button
+    optimistic: true
+    on_turn_on:
+      then:
+        - light.toggle: main_light
+
+output:
+  - platform: ledc
+    id: out_ww
+    frequency: "20000Hz"
+    pin:
+      number: GPIO33
+      mode: 
+        output: true
+  - platform: ledc
+    id: out_cw
+    frequency: "20000Hz"
+    pin:
+      number: GPIO32
+      mode: 
+        output: true
