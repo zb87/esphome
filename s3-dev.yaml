@@ -1,0 +1,11 @@
+substitutions:
+  name: "s3-dev"
+  friendly_name: "ESP32 S3 Dev"
+  log_level: "DEBUG"
+
+packages:
+  base: !include config/base.yaml
+  debug: !include config/debug.yaml
+  device: !include config/esp32-s3-n16r8.yaml
+  feature: !include config/pcb-comfoair-v1.yaml
+  #feature: !include config/pcb-doorman-v1.yaml

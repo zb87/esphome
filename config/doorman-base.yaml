@@ -1,0 +1,186 @@
+# Import TC:BUS Component
+external_components:
+  - source: github://azoninc/doorman@master
+    components: [ tc_bus ]
+    refresh: 60s
+
+# Setup TC:BUS Component
+tc_bus:
+  id: tc_bus_intercom
+  event: "doorman"
+  rx_pin: 9
+  tx_pin: 10
+
+number:
+  - platform: tc_bus
+    serial_number:
+      id: serial_number
+      name: "Serial Number"
+      icon: "mdi:numeric"
+      disabled_by_default: true
+  - platform: template
+    id: entrance_door_station_id
+    name: "Entrance Door Station ID"
+    mode : box
+    icon: "mdi:counter"
+    restore_value: true
+    initial_value: '0'
+    max_value: 63
+    min_value: 0
+    step: 1
+    optimistic: true
+    disabled_by_default: true
+    entity_category: CONFIG
+  - platform: template
+    id: second_door_station_id
+    name: "Second Door Station ID"
+    mode : box
+    icon: "mdi:counter"
+    restore_value: true
+    initial_value: '63'
+    max_value: 63
+    min_value: 0
+    step: 1
+    optimistic: true
+    disabled_by_default: true
+    entity_category: CONFIG
+
+text_sensor:
+  - platform: tc_bus
+    hardware_version:
+      id: doorman_hardware_version
+      name: "Hardware"
+      icon: "mdi:router-wireless"
+      disabled_by_default: true
+      entity_category: DIAGNOSTIC
+    bus_command:
+      id: last_bus_command
+      name: "Last Bus Command"
+  
+button:
+  # Preconfigured Open Door Button
+  - platform: template
+    id: open_entrance_door
+    name: "Open Entrance Door"
+    icon: mdi:door
+    on_press:
+      - tc_bus.send:
+          type: open_door
+          address: !lambda "return id(entrance_door_station_id).state;"
+          
+  - platform: template
+    id: open_second_door
+    name: "Open Second Entrance Door"
+    icon: mdi:door
+    on_press:
+      - tc_bus.send:
+          type: open_door
+          address: !lambda "return id(second_door_station_id).state;"
+    disabled_by_default: true
+
+  - platform: template
+    id: turn_on_light
+    name: "Turn on the Light"
+    icon: mdi:lightbulb-on
+    on_press:
+      - tc_bus.send:
+          type: light
+    disabled_by_default: true
+
+binary_sensor:
+  # Preconfigured Sensors
+  - platform: tc_bus
+    id: entrance_doorbell
+    name: "Entrance Doorbell"
+    type: door_call
+    address_lambda: !lambda "return id(entrance_door_station_id).state;"
+    auto_off: 0.2s
+
+  - platform: tc_bus
+    id: second_entrance_doorbell
+    name: "Second Entrance Doorbell"
+    type: door_call
+    address_lambda: !lambda "return id(second_door_station_id).state;"
+    auto_off: 0.2s
+    disabled_by_default: true
+
+  - platform: tc_bus
+    id: apartment_doorbell
+    name: "Apartment Doorbell"
+    type: floor_call
+    auto_off: 0.2s
+
+  - platform: tc_bus
+    id: pick_up_phone_door_call
+    name: "Pick up phone (door call)"
+    icon: "mdi:phone-check"
+    type: start_talking_door_call
+    address: 255
+    auto_off: 0.2s
+    disabled_by_default: true
+
+  - platform: tc_bus
+    id: hang_up_phone_door_call
+    name: "Hang up phone (door call)"
+    icon: "mdi:phone-remove"
+    type: stop_talking_door_call
+    address: 255
+    auto_off: 0.2s
+    disabled_by_default: true
+
+  - platform: tc_bus
+    id: pick_up_phone
+    name: "Pick up phone"
+    icon: "mdi:phone-check"
+    type: start_talking
+    address: 255
+    auto_off: 0.2s
+    disabled_by_default: true
+
+  - platform: tc_bus
+    id: hang_up_phone
+    name: "Hang up phone"
+    icon: "mdi:phone-remove"
+    type: stop_talking
+    address: 255
+    auto_off: 0.2s
+    disabled_by_default: true
+
+  - platform: tc_bus
+    id: function_button
+    name: "Function Button"
+    icon: "mdi:circle-outline"
+    auto_off: 0.2s
+    type: control_function
+    payload: 255
+    disabled_by_default: true
+
+  - platform: tc_bus
+    id: light_button
+    name: "Light Button"
+    icon: "mdi:white-balance-sunny"
+    type: light
+    auto_off: 0.2s
+    disabled_by_default: true
+
+api:
+  #homeassistant_services: true
+  actions:
+    - action: send_tc_command_raw
+      variables:
+        command: int
+      then:
+        - tc_bus.send:
+            command: !lambda 'return command;'
+    - action: send_tc_command
+      variables:
+        type: string
+        address: int
+        payload: int
+        serial_number: int
+      then:
+        - tc_bus.send:
+            type: !lambda 'return string_to_command_type(type);'
+            address: !lambda 'return address;'
+            payload: !lambda 'return payload;'
+            serial_number: !lambda 'return serial_number;'

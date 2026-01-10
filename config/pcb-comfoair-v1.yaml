@@ -1,0 +1,21 @@
+substitutions:
+  project_name: "Peterzhang.ComfoAir_PCB"
+  project_version: "1.0"
+
+packages:
+  base: !include comfoair-base.yaml
+  
+uart:
+  # Communication channel with comfoair
+  - id: !extend uart_bus
+    tx_pin: 15
+    rx_pin: 16
+  # Communication channel with remote controller
+  - id: !extend uart_proxy
+    tx_pin: 17
+    rx_pin: 18
+
+esphome:
+  project:
+    name: ${project_name}
+    version: ${project_version}

@@ -34,6 +34,7 @@ docker run --rm --net=host -v "${PWD}":/config -it ghcr.io/esphome/esphome
 
 The code is based on the following GitHub projects:
 
+* https://github.com/AzonInc/Doorman
 * https://github.com/wichers/esphome-comfoair
 * https://github.com/julianpas/esphome-comfoair
 * https://github.com/esphome/bluetooth-proxies
