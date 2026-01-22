@@ -15,7 +15,6 @@ ComfoAirComponent = comfoair_ns.class_("ComfoAirComponent", cg.Component)
 
 DEPENDENCIES = ["uart"]
 AUTO_LOAD = ["sensor", "climate", "binary_sensor", "text_sensor"]
-REQUIRED_KEY_ENTITY_ID = "climate_entity_id"
 REQUIRED_KEY_NAME = "name"
 CONF_HUB_ID = "comfoair"
 CONF_PROXY_UART_ID = "proxy_uart"
@@ -518,7 +517,6 @@ CONFIG_SCHEMA = cv.All(
     cv.Schema(
         {
             cv.GenerateID(CONF_ID): cv.declare_id(ComfoAirComponent),
-            cv.Required(REQUIRED_KEY_ENTITY_ID): cv.string,
             cv.Required(REQUIRED_KEY_NAME): cv.string,
             cv.Optional(CONF_PROXY_UART_ID): cv.use_id(uart),
         }
@@ -535,7 +533,6 @@ async def to_code(config):
     var = await climate.new_climate(config)
     await cg.register_component(var, config)
     await uart.register_uart_device(var, config)
-    cg.add(var.set_object_id(config[REQUIRED_KEY_ENTITY_ID]))
     cg.add(var.set_name(config[REQUIRED_KEY_NAME]))
     paren = await cg.get_variable(config[CONF_UART_ID])
     cg.add(var.set_uart_component(paren))

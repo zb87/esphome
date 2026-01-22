@@ -40,7 +40,6 @@ button:
 
 comfoair:
   id: comfoair_180
-  climate_entity_id: comfoair_180
   name: "ComfoAir 180"
   uart_id: uart_bus
   proxy_uart: uart_proxy

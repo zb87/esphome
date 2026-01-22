@@ -30,15 +30,15 @@ public:
   /// Return the traits of this controller.
   climate::ClimateTraits traits() override {
     auto traits = climate::ClimateTraits();
-    traits.set_supports_current_temperature(true);
+    traits.add_feature_flags(esphome::climate::CLIMATE_SUPPORTS_CURRENT_TEMPERATURE);
     traits.set_supported_modes({
       climate::CLIMATE_MODE_FAN_ONLY
     });
-    traits.set_supports_two_point_target_temperature(false);
+    traits.clear_feature_flags(esphome::climate::CLIMATE_REQUIRES_TWO_POINT_TARGET_TEMPERATURE);
     traits.set_supported_presets({
       climate::CLIMATE_PRESET_HOME,
     });
-    traits.set_supports_action(false);
+    traits.clear_feature_flags(esphome::climate::CLIMATE_SUPPORTS_ACTION);
     traits.set_visual_min_temperature(COMFOAIR_MIN_SUPPORTED_TEMP);
     traits.set_visual_max_temperature(COMFOAIR_MAX_SUPPORTED_TEMP);
     traits.set_visual_temperature_step(COMFOAIR_SUPPORTED_TEMP_STEP);
