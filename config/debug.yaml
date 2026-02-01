@@ -2,11 +2,6 @@ debug:
   update_interval: 5s
 
 sensor:
-  - platform: debug
-    psram:
-      id: debug_free_psram
-      name: "Free PSRAM"
-      entity_category: DIAGNOSTIC
   - platform: wifi_signal
     id: debug_wifi_signal_db
     update_interval: 60s

@@ -1,0 +1,11 @@
+substitutions:
+  name: "s3n4-dev"
+  friendly_name: "ESP32 S3 Dev"
+  log_level: "DEBUG"
+
+packages:
+  base: !include config/base.yaml
+  debug: !include config/debug.yaml
+  device: !include config/esp32-s3-n4.yaml
+  #bluetooth_proxy: !include config/bluetooth-proxy.yaml
+  feature: !include config/pcb-doorman-v1.yaml
