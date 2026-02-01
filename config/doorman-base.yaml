@@ -164,7 +164,7 @@ binary_sensor:
     disabled_by_default: true
 
 api:
-  #homeassistant_services: true
+  homeassistant_services: true
   actions:
     - action: send_tc_command_raw
       variables:
