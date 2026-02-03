@@ -1,0 +1,23 @@
+substitutions:
+  project_name: "Peterzhang.Doorman_PCB"
+  project_version: "1.6"
+  rx_pin: "GPIO9"
+  tx_pin: "GPIO8"
+  led_pin: "GPIO1"
+  rgb_led_pin: "GPIO2"
+  relay_pin: "GPIO42"
+  external_button_pin: "GPIO41"
+  adc_input_pin: "GPIO10"
+
+packages:
+  base: !include doorman-base.yaml
+  api: !include doorman-api.yaml
+  pattern_events: !include doorman-pattern-events.yaml
+  ring_to_open: !include doorman-ring-to-open.yaml
+  indoor_station_settings: !include doorman-indoor-station-settings.yaml
+  interactive_setup: !include doorman-interactive-setup.yaml
+
+esphome:
+  project:
+    name: ${project_name}
+    version: ${project_version}
