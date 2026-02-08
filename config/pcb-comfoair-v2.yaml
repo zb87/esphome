@@ -1,0 +1,132 @@
+substitutions:
+  project_name: "Peterzhang.ComfoAir_PCB"
+  project_version: "2.0"
+
+packages:
+  base: !include comfoair-base.yaml
+  
+uart:
+  # Communication channel with comfoair
+  - id: !extend uart_bus
+    tx_pin: 15
+    rx_pin: 16
+  # Communication channel with remote controller
+  - id: !extend uart_proxy
+    tx_pin: 17
+    rx_pin: 18
+
+esphome:
+  project:
+    name: ${project_name}
+    version: ${project_version}
+  on_boot:
+    - priority: 375.0
+      then:
+        # RGB status LED boot sequence
+        - script.execute: boot_state
+
+light:
+  - platform: esp32_rmt_led_strip
+    id: rgb_status_led
+    name: RGB Status LED
+    icon: "mdi:led-on"
+    internal: true
+    restore_mode: ALWAYS_OFF
+    rgb_order: GRB
+    pin: GPIO2
+    num_leds: 1
+    chipset: ws2812
+    use_psram: true
+    rmt_symbols: 144
+    gamma_correct: 1
+    default_transition_length: 1s
+    effects:
+      - lambda:
+          name: pulse
+          update_interval: 250ms
+          lambda: |-
+            static bool on_ = false;
+
+            auto call = id(rgb_status_led).make_call();
+            
+            call.set_state(true);
+            call.set_color_mode_if_supported(light::ColorMode::RGB);
+
+            float out = on_ ? 10.0 : 0;
+            call.set_brightness_if_supported(out);
+
+            call.set_transition_length_if_supported(250);
+            on_ = !on_;
+            
+            // don't tell HA every change
+            call.set_publish(false);
+            call.set_save(false);
+            call.perform();
+
+      - lambda:
+          name: slow_pulse
+          update_interval: 2s
+          lambda: |-
+            static bool on_ = false;
+
+            auto call = id(rgb_status_led).make_call();
+            
+            call.set_state(true);
+            call.set_color_mode_if_supported(light::ColorMode::RGB);
+
+            float out = on_ ? 10.0 : 0;
+            call.set_brightness_if_supported(out);
+
+            call.set_transition_length_if_supported(2500);
+            on_ = !on_;
+            
+            // don't tell HA every change
+            call.set_publish(false);
+            call.set_save(false);
+            call.perform();
+
+script:
+  - id: boot_state
+    then:
+      # Boot Status LED
+      - logger.log: "LED: Waiting for WiFi connection or provisioning"
+      - light.turn_on:
+          id: rgb_status_led
+          effect: slow_pulse
+          red: 30%
+          green: 10%
+          blue: 0%
+      # Wait until wifi is connected or ap is active
+      - wait_until:
+          condition:
+            - lambda: return id(wifi_id).is_connected() || id(wifi_id).is_ap_active();
+      # Check if connected or AP active
+      - if:
+          condition: wifi.ap_active
+          then:
+            # AP active
+            - logger.log: "LED: Waiting for WiFi configuration (AP Mode)"
+            - light.turn_on:
+                id: rgb_status_led
+                effect: pulse
+                red: 30%
+                green: 10%
+                blue: 0%
+            # Wait until AP is deactivated
+            - wait_until:
+                condition:
+                  - lambda: return id(wifi_id).is_ap_active() == false;
+            - logger.log: "LED: Waiting for WiFi connection after AP"
+            - light.turn_on:
+                id: rgb_status_led
+                effect: slow_pulse
+                red: 30%
+                green: 10%
+                blue: 0%
+            # Wait until wifi is really connected
+            - wait_until:
+                condition: wifi.connected
+      # WiFi connected
+      - logger.log: "LED: WiFi connected."
+      - light.turn_off:
+          id: rgb_status_led
