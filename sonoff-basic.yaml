@@ -14,7 +14,7 @@ esphome:
 binary_sensor:
   - platform: gpio
     pin:
-      number: GPIO14
+      number: GPIO0
       mode:
         input: true
         pullup: true
@@ -23,9 +23,6 @@ binary_sensor:
     on_press:
       then:
         - switch.toggle: switch_1
-
-  - platform: status
-    name: "My LS Status"
 
 switch:
   - platform: gpio
