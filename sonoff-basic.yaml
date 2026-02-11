@@ -1,11 +1,11 @@
 substitutions:
   name: "sonoff-basic"
   friendly_name: "sonoff-basic"
-  log_level: "DEBUG"
+  log_level: "INFO"
 
 packages:
   base: !include config/base.yaml
-  debug: !include config/debug.yaml
+  #debug: !include config/debug.yaml
   device: !include config/esp8266.yaml
 
 esphome:
