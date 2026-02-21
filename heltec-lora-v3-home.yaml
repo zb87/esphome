@@ -1,0 +1,57 @@
+# Heltec Wireless Stick Lite V3 - LoRa Home Node
+
+esphome:
+  name: "heltec-lora-v3-home"
+
+packages:
+  heltec_lora_v3_base: !include config/heltec-lora-v3-base.yaml
+
+api:
+
+ota:
+  platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: Europe/Zurich
+
+sx126x:
+  on_packet:
+    - lambda: |-
+        id(lora_rssi).publish_state(rssi);
+        id(lora_snr).publish_state(snr);
+        id(lora_last_time).publish_state(id(sntp_time).now().strftime("%Y-%m-%d %H:%M:%S"));
+        id(lora_last_message).publish_state(format_hex(x).c_str());
+        
+        ESP_LOGD("lora", "Received packet RSSI: %.2f dBm, SNR: %.2f dB, Data: %s", rssi, snr, format_hex(x).c_str());
+
+sensor:
+  - platform: template
+    name: "LoRa Last RSSI"
+    id: lora_rssi
+    unit_of_measurement: "dBm"
+    state_class: measurement
+    device_class: signal_strength
+    accuracy_decimals: 1
+
+  - platform: template
+    name: "LoRa Last SNR"
+    id: lora_snr
+    unit_of_measurement: "dB"
+    state_class: measurement
+    accuracy_decimals: 1
+
+text_sensor:
+  - platform: template
+    name: "LoRa Last Message Time"
+    id: lora_last_time
+    icon: "mdi:clock-outline"
+
+  - platform: template
+    name: "LoRa Last Message"
+    id: lora_last_message

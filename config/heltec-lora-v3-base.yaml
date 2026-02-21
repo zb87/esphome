@@ -1,0 +1,37 @@
+# Heltec Wireless Stick Lite V3 - Base Configuration
+
+esp32:
+  variant: esp32s3
+  flash_size: 8MB
+  cpu_frequency: 240MHZ
+  framework:
+    type: esp-idf
+
+logger:
+  hardware_uart: UART0
+
+# SPI bus for LoRa radio
+spi:
+  clk_pin: GPIO9
+  mosi_pin: GPIO10
+  miso_pin: GPIO11
+
+sx126x:
+  dio1_pin: GPIO14
+  cs_pin: GPIO8
+  busy_pin: GPIO13
+  rst_pin: GPIO12
+  pa_power: 22
+  bandwidth: 62_5kHz
+  crc_enable: true
+  frequency: 433920000
+  modulation: LORA
+  rx_start: true
+  hw_version: sx1262
+  rf_switch: true
+  sync_value: [0x14, 0x24]
+  preamble_size: 8
+  spreading_factor: 10
+  coding_rate: CR_4_8
+  tcxo_voltage: 1_8V
+  tcxo_delay: 5ms

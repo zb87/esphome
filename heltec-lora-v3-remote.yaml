@@ -1,0 +1,27 @@
+# Heltec Wireless Stick Lite V3 - LoRa Remote Node
+
+esphome:
+  name: "heltec-lora-v3-remote"
+
+packages:
+  heltec_lora_v3_base: !include config/heltec-lora-v3-base.yaml
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO0
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    id: user_button
+    on_press:
+      then:
+        - lambda: |-
+            ESP_LOGD("button", "Sending LoRa packet");
+        - sx126x.send_packet:
+            data: [0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE, 0xBA, 0xBE]
+        - lambda: |-
+            ESP_LOGD("button", "LoRa packet sent");
+
+# TODO: add deep sleep and wake on button press to save power
